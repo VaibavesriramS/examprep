@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  database:
+    image: pgvector/pgvector:pg16
+    container_name: examforge_database
+    environment:
+      POSTGRES_DB: examforge
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - examforge_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: examforge_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - examforge_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: examforge_backend
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@database:5432/examforge
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=replace-this-with-a-secure-random-key-in-production
+      - ENV=development
+    ports:
+      - "8000:8000"
+    depends_on:
+      - database
+      - redis
+    networks:
+      - examforge_network
+
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: examforge_worker
+    command: celery -A app.queue.worker.celery_app worker --loglevel=info -Q ocr_queue,ai_queue,critical_queue
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@database:5432/examforge
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=replace-this-with-a-secure-random-key-in-production
+    depends_on:
+      - redis
+      - database
+    networks:
+      - examforge_network
+
+networks:
+  examforge_network:
+    driver: bridge
+
+volumes:
+  pgdata:
