@@ -55,7 +55,8 @@ async def assistant_chat_stream(
         full_response = ""
         for chunk in responses:
             full_response += chunk
-            yield f"data: {{\"token\": \"{chunk.replace(chr(10), '\\n')}\"}}\n\n"
+            escaped_chunk = chunk.replace(chr(10), "\\n")
+            yield f"data: {{\"token\": \"{escaped_chunk}\"}}\n\n"
             await asyncio.sleep(0.3)
 
         # Log AI response to the history table

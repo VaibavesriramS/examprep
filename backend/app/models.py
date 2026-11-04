@@ -140,3 +140,27 @@ class AuditLog(Base):
     action = Column(String(255), nullable=False) # e.g., GENERATE_PAPER, EDIT_QUESTION, APPROVE_PAPER
     timestamp = Column(DateTime, default=datetime.utcnow)
     details = Column(JSON, nullable=True) # Dynamic context payload
+
+class ChatConversation(Base):
+    __tablename__ = "chat_conversations"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("institutions.id", ondelete="CASCADE"), nullable=False)
+    title = Column(String(255), nullable=True)
+    is_deleted = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    messages = relationship("ChatMessage", back_populates="conversation", cascade="all, delete-orphan")
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    conversation_id = Column(UUID(as_uuid=True), ForeignKey("chat_conversations.id", ondelete="CASCADE"), nullable=False)
+    sender = Column(String(50), nullable=False)
+    message_text = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    conversation = relationship("ChatConversation", back_populates="messages")
